@@ -59,20 +59,49 @@ tiempo <- data_1$d.time
 estado <- data_1$death
 datos_sin_t_ni_status <- data_1[,-c(2,5)]
 nuestro_stepwise <- function(tiempo, estado, datos_sin_t_ni_status){
+  
+  maximos <- c()
+  minimos <- c()
+  
   variables <- names(datos_sin_t_ni_status)
   m <- length(variables)
   aux_c.index <- c()
   surv_obj <- Surv(tiempo, estado)
   for (id_variable in 1:m){
-    surv_fit <- coxph(surv_obj ~ ., data = datos_sin_t_ni_status[,..id_variable])
+    surv_fit <- coxph(surv_obj ~ ., data = select(datos_sin_t_ni_status, variables[id_variable]))
     c.index <- as.vector(surv_fit$concordance["concordance"])
     aux_c.index[id_variable] <- c.index
     names(aux_c.index)[id_variable] <- variables[id_variable]
   }
+  min_c.index <- names(aux_c.index)[which.min(aux_c.index)]
+  max_c.index <- names(aux_c.index)[which.max(aux_c.index)]
   
+  minimos[1] <- min_c.index
+  maximos[1] <- max_c.index
+  
+  while (m > 1){
+    variables <- variables[!variables %in% c(minimos,maximos)]
+    m <- length(variables) - 2
+    aux_c.index <- c()
+    for (id_variable in 1:m){
+      datitos <- select(datos_sin_t_ni_status, c(variables[id_variable], all_of(maximos)))
+      surv_fit <- coxph(surv_obj ~ ., data = datitos)
+      c.index <- as.vector(surv_fit$concordance["concordance"])
+      aux_c.index[id_variable] <- c.index
+      names(aux_c.index)[id_variable] <- variables[id_variable]
+    }
+    min_c.index <- names(aux_c.index)[which.min(aux_c.index)]
+    max_c.index <- names(aux_c.index)[which.max(aux_c.index)]
+    minimos <- c(minimos,min_c.index)
+    maximos <- c(maximos,max_c.index)
+  }
+  out_datitos  <- select(datos_sin_t_ni_status, all_of(maximos))
+  out_surv_fit <- coxph(surv_obj ~ ., data = out_datitos)
+  
+  return(out_surv_fit)
 }
 
-
+x[!x %in% 3:10]
 
 
 
