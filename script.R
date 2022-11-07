@@ -44,5 +44,4 @@ DBSMOTed <- DBSMOTed$data
 
 # DBSMOTed %>% select("class") %>% table(.) %>% prop.table(.) %>% print(.)# DBSMOTed %>% select("class") %>% table(.) %>% prop.table(.) %>% print(.)
 
-View(data_4)
-table(data_1$dzclass)
+
