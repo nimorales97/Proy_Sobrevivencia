@@ -1,0 +1,22 @@
+---
+title: "Algoritmo stepwise: selección de variables en base al c-index"
+subtitle: "Introducción al análisis de Sobrevivencia"
+author: 
+  - "Jeremías Mora"
+  - "Nicolás Morales"
+  - "Profesora: Alejadra Tapia <3"
+date: "07-11-2022"
+format: 
+    revealjs:
+        theme: solarized
+editor: visual
+---
+
+    ```{css, include=FALSE}
+
+    .title {
+      font-size: 40px !important
+    }
+    ```
+
+## 
