@@ -24,46 +24,62 @@ data_1 <- data %>%
 # load(url('https://hbiostat.org/data/repo/support.sav'))
 # View(support)
 
-data_2 <- data %>% filter(dzclass == "ARF/MOSF")
-data_3 <- data %>% filter(dzclass == "COPD/CHF/Cirrhosis")
+data_2 <- data %>%
+  filter(dzclass == "ARF/MOSF" , race != "") %>% 
+  select(-all_of(drop_col_1)) %>% 
+  na.omit() %>% 
+  get_dummies() %>% 
+  select(-all_of(c("sex","dzgroup","race","dnr")))
+
+data_3 <- data %>% 
+  filter(dzclass == "COPD/CHF/Cirrhosis") %>% 
+  select(-all_of(drop_col_1)) %>% 
+  na.omit() %>% 
+  get_dummies() %>% 
+  select(-all_of(c("sex","dzgroup","race","dnr")))
 
 data <- read.csv("METABRIC_RNA_Mutation.csv") %>% as.data.table(.)
 
 data_4 <- data %>% 
   select(1:31) %>% 
   filter(death_from_cancer != "Died of Other Causes") %>% 
-  mutate(status = case_when(death_from_cancer == "Died of Disease" ~ 1, TRUE ~ 0))
-
-##############
-# Train-Test #
-##############
-
-# sample <- sample.split(data_1_balanced$class, SplitRatio = 0.8)
-# train  <- subset(data_1_balanced, sample == TRUE)
-# test   <- subset(data_1_balanced, sample == FALSE)
-
-# sample <- sample.split(data_1$death, SplitRatio = 0.8)
-# train  <- subset(data_1, sample == TRUE)
-# test   <- subset(data_1, sample == FALSE)
-# train[,"dzgroup_Colon Cancer"] %>% table %>% prop.table
-# test[,"dzgroup_Colon Cancer"]  %>% table %>% prop.table
-
-fit <- coxph(Surv(data_1$d.time, data_1$death) ~ . , data = data_1) #Concordance= 0.765  (se = 0.007 )
-
-pred.fit <- predict(fit)
-concordance(Surv(data_1$d.time, data_1$death) ~ pred.fit, data=data_1)
+  mutate(
+    time = overall_survival_months,
+    status = case_when(overall_survival == 1 ~ 0, TRUE ~ 1)
+    ) %>% 
+  select(-all_of(c("overall_survival_months",
+                   "overall_survival",
+                   "patient_id","cancer_type",
+                   "death_from_cancer",
+                   "pam50_._claudin.low_subtype"))) %>% 
+  na_if("") %>% 
+  na.omit() %>% 
+  get_dummies() %>% 
+  select(where(is.numeric))
 
 
 # ---------------------------
-tiempo <- data_1$d.time
-estado <- data_1$death
-datos_sin_t_ni_status <- data_1[,-c(2,5)]
 nuestro_stepwise <- function(tiempo, estado, datos_sin_t_ni_status){
   
   maximos <- c()
   minimos <- c()
+  
   variables <- names(datos_sin_t_ni_status)
   m <- length(variables)
+  aux_c.index <- c()
+  surv_obj <- Surv(tiempo, estado)
+  for (id_variable in 1:m){
+    surv_fit <- coxph(surv_obj ~ ., data = select(datos_sin_t_ni_status, variables[id_variable]))
+    c.index <- as.vector(surv_fit$concordance["concordance"])
+    aux_c.index[id_variable] <- c.index
+    names(aux_c.index)[id_variable] <- variables[id_variable]
+  }
+  min_c.index <- names(aux_c.index)[which.min(aux_c.index)]
+  max_c.index <- names(aux_c.index)[which.max(aux_c.index)]
+  
+  minimos[1] <- min_c.index
+  maximos[1] <- max_c.index
+  
   while (m > 1){
     variables <- variables[!variables %in% c(minimos,maximos)]
     m <- length(variables) - 2
@@ -85,18 +101,4 @@ nuestro_stepwise <- function(tiempo, estado, datos_sin_t_ni_status){
   
   return(out_surv_fit)
 }
-
-x[!x %in% 3:10]
-
-
-
-
-steps <- 1000
-c.index <- 0
-
-while ( steps > 0 & c.index < 0.7){
-  steps <- steps - 1
-  surv_obj <- Surv(tiempo, estado)
-  surv_fit <- coxph(surv_obj ~ . , data = datos)
-  c.index <- as.vector(surv_fit$concordance["concordance"])
-}
+# fitness <- nuestro_stepwise(data_4$time, data_4$status, data_4[,-c(12,13)])
