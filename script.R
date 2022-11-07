@@ -6,10 +6,23 @@ library("data.table")
 library("caTools")
 library("tidytable")
 library("survival")
+library("labelled")
 
 ##############
 # Trae datos #
 ##############
+
+load(url('https://hbiostat.org/data/repo/support.sav'))
+# View(support)
+m <- length(names(support))
+V = c()
+Label = c()
+
+for (v in 1:m){
+  V[v] = names(support)[v]
+  Label[v] = var_label(support)[names(support)[v]]
+}
+df <- data.frame(cbind(V,Label))
 
 data <- read.csv("support2.csv") %>% as.data.table(.)
 
@@ -21,8 +34,7 @@ data_1 <- data %>%
   get_dummies() %>% 
   select(-all_of(c("sex","dzgroup","race","dnr")))
 
-# load(url('https://hbiostat.org/data/repo/support.sav'))
-# View(support)
+
 
 data_2 <- data %>%
   filter(dzclass == "ARF/MOSF" , race != "") %>% 
@@ -58,7 +70,6 @@ data_4 <- data %>%
   select(where(is.numeric))
 
 
-# ---------------------------
 nuestro_stepwise <- function(tiempo, estado, datos_sin_t_ni_status){
   
   maximos <- c()

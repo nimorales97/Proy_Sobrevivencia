@@ -4,7 +4,7 @@ subtitle: "Introducción al análisis de Sobrevivencia"
 author: 
   - "Jeremías Mora"
   - "Nicolás Morales"
-  - "Profesora: Alejadra Tapia <3"
+  - "Profesora: Alejadra Tapia"
 date: "07-11-2022"
 format: 
     revealjs:
@@ -12,11 +12,136 @@ format:
 editor: visual
 ---
 
-    ```{css, include=FALSE}
+## Introducción
 
-    .title {
-      font-size: 40px !important
-    }
-    ```
+En general, los estudios de análisis de sobrevivencia incluyen una gran cantidad de datos complementarios, que van desde biomarcadores, hasta variables indicadoras para una intervención o condición como la presencia de una enfermedad, antecedente de una operación, o incluso nivel socioeconómico.
 
-## 
+## Introducción
+
+El efecto de estas covariables incluidas en el modelo sobre el riesgo de falla suele ser el objeto de estudio, sin embargo, en este trabajo se apunta a aquellos escenarios en que lo importante es la predicción del riesgo de falla dada una colección de datos.
+
+## Introducción
+
+#### El análisis de sobrevivencia como problema de *ranking*
+
+Como se desprende de la fórmula de verosimilitud parcial, el riesgo relativo depende del orden de las observaciones.
+
+![Función de verosimilitud parcial](llik.PNG){width="283"}
+
+## Introducción
+
+#### El análisis de sobrevivencia como problema de *ranking*
+
+De hecho, esta función de verosimilitud depende más del orden o *ranking* de los datos más que de sus valores numéricos. Es por esto que se propone abordar el problema de sobrevivencia como un problema de ranking (Steck, et al.,2007).
+
+Nótese que este enfoque también permite lidiar con datos censurados.
+
+## Metodología
+
+#### Índice de concordancia
+
+También llamada probabilidad de concordancia, puede interpretarse como la fracción de los pares de individuos cuyos tiemnpos de sobrevivencia predichos están correctamente ordenados, respecto del total de combinaciones posibles.
+
+(Recordemos que uno de los supuestos en los modelos de Cox es que no hay dos observaciones para un mismo tiempo)
+
+## Metodología
+
+#### Índice de concordancia
+$\Delta_i$: indicadora de falla en el tiempo $t_i$
+
+$M_i$: riesgo evaluado para el individuo correspondiente a $t_i$
+
+![Índice de concordancia](images/paste-22F4298D.png){width="428"}
+
+## Metodología
+
+#### Índice de concordancia
+
+En R, para modelos de riesgos proporcionales, el índice se obtiene del objeto retornado por la función `coxph`.
+
+`coxph( objeto_Surv ~ variables_de_interes , data = base_de_out)`
+
+## Metodología
+
+#### Algoritmo stepwise
+
+En su definición más general, se trata de un algoritmo para selección de variables en base a la optimización de una cierta métrica o bajo un determinado criterio. El más común es en base al criterio AIC.
+
+Existen tres tipos:
+
+1.  Forward selection
+
+2.  Backward selection
+
+3.  Stepwise
+
+## Aplicación
+
+#### Elaboración del algoritmo
+
+![Algoritmo-de-selección](algoritmo.PNG)
+
+## Aplicación
+
+#### Datos
+
+Siguiendo el trabajo de (Steck, et al.,2007), para efectos de la implementación de este algoritmo se utilizaron varias bases de datos.
+
+Las tres primeras, corresponden a la base de datos `SUPPORT` publicada por la escuela de medicina de Vanderbilt, dividida en tres según causa de muerte del individuo.
+
+## Aplicación
+
+#### Datos
+
+La cuarta, de nombre `Breast Cancer Gene Expression Profiles (METABRIC)` corresponde a una base de datos publicada en el sitio Kaggle.com coleccionada por las instituciones Cambridge Research Institute y British Columbia Cancer Centre.
+
+## Aplicación
+
+#### Datos: SUPPORT
+
+```{r}
+#| echo: false
+devtools::install_github("haozhu233/kableExtra")
+V <- c("age","death","sex","hospdead",
+       "slos","d.time","dzgroup","dzclass",
+       "num.co","edu","income","scoma",
+       "charges","totcst","totmcst","avtisst",
+       "race","meanbp","wblc","hrt",
+       "resp","temp","pafi","alb",
+       "bili","crea","sod","ph",
+       "glucose","bun","urine","adlp",
+       "adls","sfdm2","adlsc")
+Lab <- c("age",
+        "Death at any time up to NDI date:31DEC94",
+        "NULL",
+        "Death in Hospital",
+        "Days from Study Entry to Discharge",
+        "Days of Follow-Up","NULL","NULL","number of comorbidities","Years of Education",
+        "NULL",
+        "SUPPORT Coma Score based on Glasgow D3",
+        "Hospital Charges",
+        "Total RCC cost",
+        "Total micro-cost",
+        "Average TISS, Days 3-25",
+        "NULL",
+        "Mean Arterial Blood Pressure Day 3",
+        "White Blood Cell Count Day 3",
+        "Heart Rate Day 3",
+        "Respiration Rate Day 3",
+        "Temperature (celcius) Day 3",
+        "PaO2/(.01*FiO2) Day 3",
+        "Serum Albumin Day 3",
+        "Bilirubin Day 3",
+        "Serum creatinine Day 3",
+        "Serum sodium Day 3",
+        "Serum pH (arterial) Day 3",
+        "Glucose Day 3",
+        "BUN Day 3",
+        "Urine Output Day 3",
+        "ADL Patient Day 3",
+        "ADL Surrogate Day 3",
+        "NULL",
+        "Imputed ADL Calibrated to Surrogate")
+df <- data.frame(cbind(V,Lab))
+
+```
