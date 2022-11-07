@@ -62,23 +62,8 @@ nuestro_stepwise <- function(tiempo, estado, datos_sin_t_ni_status){
   
   maximos <- c()
   minimos <- c()
-  
   variables <- names(datos_sin_t_ni_status)
   m <- length(variables)
-  aux_c.index <- c()
-  surv_obj <- Surv(tiempo, estado)
-  for (id_variable in 1:m){
-    surv_fit <- coxph(surv_obj ~ ., data = select(datos_sin_t_ni_status, variables[id_variable]))
-    c.index <- as.vector(surv_fit$concordance["concordance"])
-    aux_c.index[id_variable] <- c.index
-    names(aux_c.index)[id_variable] <- variables[id_variable]
-  }
-  min_c.index <- names(aux_c.index)[which.min(aux_c.index)]
-  max_c.index <- names(aux_c.index)[which.max(aux_c.index)]
-  
-  minimos[1] <- min_c.index
-  maximos[1] <- max_c.index
-  
   while (m > 1){
     variables <- variables[!variables %in% c(minimos,maximos)]
     m <- length(variables) - 2
