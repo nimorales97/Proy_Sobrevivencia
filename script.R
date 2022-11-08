@@ -12,17 +12,17 @@ library("labelled")
 # Trae datos #
 ##############
 
-load(url('https://hbiostat.org/data/repo/support.sav'))
-# View(support)
-m <- length(names(support))
-V = c()
-Label = c()
-
-for (v in 1:m){
-  V[v] = names(support)[v]
-  Label[v] = var_label(support)[names(support)[v]]
-}
-df <- data.frame(cbind(V,Label))
+# load(url('https://hbiostat.org/data/repo/support.sav'))
+# # View(support)
+# m <- length(names(support))
+# V = c()
+# Label = c()
+# 
+# for (v in 1:m){
+#   V[v] = names(support)[v]
+#   Label[v] = var_label(support)[names(support)[v]]
+# }
+# df <- data.frame(cbind(V,Label))
 
 data <- read.csv("support2.csv") %>% as.data.table(.)
 
@@ -64,23 +64,23 @@ data_4 <- data %>%
                    "patient_id","cancer_type",
                    "death_from_cancer",
                    "pam50_._claudin.low_subtype"))) %>% 
-  na_if("") %>% 
+  dplyr::na_if("") %>% 
   na.omit() %>% 
   get_dummies() %>% 
   select(where(is.numeric))
 
 
-nuestro_stepwise <- function(tiempo, estado, datos_sin_t_ni_status){
+nuestro_stepwise <- function(tiempo, estado, covariables){
   
   maximos <- c()
   minimos <- c()
   
-  variables <- names(datos_sin_t_ni_status)
+  variables <- names(covariables)
   m <- length(variables)
   aux_c.index <- c()
   surv_obj <- Surv(tiempo, estado)
   for (id_variable in 1:m){
-    surv_fit <- coxph(surv_obj ~ ., data = select(datos_sin_t_ni_status, variables[id_variable]))
+    surv_fit <- coxph(surv_obj ~ ., data = select(covariables, variables[id_variable]))
     c.index <- as.vector(surv_fit$concordance["concordance"])
     aux_c.index[id_variable] <- c.index
     names(aux_c.index)[id_variable] <- variables[id_variable]
@@ -96,8 +96,8 @@ nuestro_stepwise <- function(tiempo, estado, datos_sin_t_ni_status){
     m <- length(variables) - 2
     aux_c.index <- c()
     for (id_variable in 1:m){
-      datitos <- select(datos_sin_t_ni_status, c(variables[id_variable], all_of(maximos)))
-      surv_fit <- coxph(surv_obj ~ ., data = datitos)
+      covariables_aux <- select(covariables, c(variables[id_variable], all_of(maximos)))
+      surv_fit <- coxph(surv_obj ~ ., data = covariables_aux)
       c.index <- as.vector(surv_fit$concordance["concordance"])
       aux_c.index[id_variable] <- c.index
       names(aux_c.index)[id_variable] <- variables[id_variable]
@@ -107,9 +107,14 @@ nuestro_stepwise <- function(tiempo, estado, datos_sin_t_ni_status){
     minimos <- c(minimos,min_c.index)
     maximos <- c(maximos,max_c.index)
   }
-  out_datitos  <- select(datos_sin_t_ni_status, all_of(maximos))
-  out_surv_fit <- coxph(surv_obj ~ ., data = out_datitos)
+  out_covariables_aux  <- select(covariables, all_of(maximos))
+  out_surv_fit <- coxph(surv_obj ~ ., data = out_covariables_aux)
   
   return(out_surv_fit)
 }
-# fitness <- nuestro_stepwise(data_4$time, data_4$status, data_4[,-c(12,13)])
+
+fit_1 <- nuestro_stepwise(data_1$d.time, data_1$death, data_1[,-c(2,5)])
+fit_2 <- nuestro_stepwise(data_2$d.time, data_2$death, data_2[,-c(2,5)])
+fit_3 <- nuestro_stepwise(data_3$d.time, data_3$death, data_3[,-c(2,5)])
+
+fit_4 <- nuestro_stepwise(data_4$time, data_4$status, data_4[,-c(12,13)])

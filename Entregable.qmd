@@ -47,6 +47,7 @@ También llamada probabilidad de concordancia, puede interpretarse como la fracc
 ## Metodología
 
 #### Índice de concordancia
+
 $\Delta_i$: indicadora de falla en el tiempo $t_i$
 
 $M_i$: riesgo evaluado para el individuo correspondiente a $t_i$
@@ -101,8 +102,9 @@ La cuarta, de nombre `Breast Cancer Gene Expression Profiles (METABRIC)` corresp
 
 ```{r}
 #| echo: false
-devtools::install_github("haozhu233/kableExtra")
-V <- c("age","death","sex","hospdead",
+library("kableExtra")
+library("dplyr")
+Variable <- c("age","death","sex","hospdead",
        "slos","d.time","dzgroup","dzclass",
        "num.co","edu","income","scoma",
        "charges","totcst","totmcst","avtisst",
@@ -111,7 +113,7 @@ V <- c("age","death","sex","hospdead",
        "bili","crea","sod","ph",
        "glucose","bun","urine","adlp",
        "adls","sfdm2","adlsc")
-Lab <- c("age",
+Etiqueta <- c("age",
         "Death at any time up to NDI date:31DEC94",
         "NULL",
         "Death in Hospital",
@@ -142,6 +144,67 @@ Lab <- c("age",
         "ADL Surrogate Day 3",
         "NULL",
         "Imputed ADL Calibrated to Surrogate")
-df <- data.frame(cbind(V,Lab))
+df <- data.frame(cbind(Variable,Etiqueta))
+kbl(df) %>%
+  kable_paper() %>%
+  scroll_box(width = "800px", height = "500px")
+```
 
+## Aplicación
+
+#### Datos: METABRIC
+
+```{r}
+datos <- readxl::read_xlsx("labels_metabric.xlsx")
+datos[,2] <- NULL
+kbl(datos) %>%
+  kable_paper() %>%
+  scroll_box(width = "1000px", height = "500px")
+```
+
+## Implementación
+
+``` R
+nuestro_stepwise <- function(tiempo, estado, covariables){
+  
+  maximos <- c()
+  minimos <- c()
+  
+  variables <- names(covariables)
+  m <- length(variables)
+  aux_c.index <- c()
+  surv_obj <- Surv(tiempo, estado)
+  for (id_variable in 1:m){
+    surv_fit <- coxph(surv_obj ~ ., data = select(covariables, variables[id_variable]))
+    c.index <- as.vector(surv_fit$concordance["concordance"])
+    aux_c.index[id_variable] <- c.index
+    names(aux_c.index)[id_variable] <- variables[id_variable]
+  }
+  min_c.index <- names(aux_c.index)[which.min(aux_c.index)]
+  max_c.index <- names(aux_c.index)[which.max(aux_c.index)]
+  
+  minimos[1] <- min_c.index
+  maximos[1] <- max_c.index
+  
+  while (m > 1){
+    variables <- variables[!variables %in% c(minimos,maximos)]
+    m <- length(variables) - 2
+    aux_c.index <- c()
+    for (id_variable in 1:m){
+      covariables_aux <- select(covariables, c(variables[id_variable], all_of(maximos)))
+      surv_fit <- coxph(surv_obj ~ ., data = covariables_aux)
+      c.index <- as.vector(surv_fit$concordance["concordance"])
+      aux_c.index[id_variable] <- c.index
+      names(aux_c.index)[id_variable] <- variables[id_variable]
+    }
+    min_c.index <- names(aux_c.index)[which.min(aux_c.index)]
+    max_c.index <- names(aux_c.index)[which.max(aux_c.index)]
+    minimos <- c(minimos,min_c.index)
+    maximos <- c(maximos,max_c.index)
+  }
+  out_covariables_aux  <- select(covariables, all_of(maximos))
+  out_surv_fit <- coxph(surv_obj ~ ., data = out_covariables_aux)
+  
+  return(out_surv_fit)
+}
 ```
